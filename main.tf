@@ -1,11 +1,16 @@
 locals {
   dns_name               = "${join("", aws_efs_file_system.default.*.id)}.efs.${var.region}.amazonaws.com"
-  security_group_enabled = module.this.enabled && var.security_group_enabled
+  security_group_enabled = var.security_group_enabled
 }
 
 resource "aws_efs_file_system" "default" {
-  count                           = module.this.enabled ? 1 : 0
-  tags                            = module.this.tags
+  tags = merge(
+    {
+      "Name" = format("%s", var.name)
+    },
+    var.tags,
+  )
+
   encrypted                       = var.encrypted
   kms_key_id                      = var.kms_key_id
   performance_mode                = var.performance_mode
@@ -21,13 +26,13 @@ resource "aws_efs_file_system" "default" {
 }
 
 resource "aws_efs_mount_target" "default" {
-  count          = module.this.enabled && length(var.subnets) > 0 ? length(var.subnets) : 0
+  count          = length(var.subnets) > 0 ? length(var.subnets) : 0
   file_system_id = join("", aws_efs_file_system.default.*.id)
   ip_address     = var.mount_target_ip_address
   subnet_id      = var.subnets[count.index]
   security_groups = compact(
     sort(concat(
-      [module.security_group.id],
+      [module.security_group.security_group_id],
       var.security_groups
     ))
   )
@@ -54,31 +59,34 @@ resource "aws_efs_access_point" "default" {
     }
   }
 
-  tags = module.this.tags
+  tags = var.tags
 }
 
 module "security_group" {
-  source  = "cloudposse/security-group/aws"
-  version = "0.3.1"
+  source = "git::git@scm.capside.com:terraform/aws/terraform-aws-security-group.git?ref=ntt/1.0.0"
 
-  use_name_prefix = var.security_group_use_name_prefix
-  rules           = var.security_group_rules
-  vpc_id          = var.vpc_id
-  description     = var.security_group_description
+  name   = format("sec-%s", var.name)
+  use_name_prefix = false
+  
+  vpc_id = var.vpc_id
+  ingress_with_cidr_blocks = [
+    {
+      from_port   = 2049
+      to_port     = 2049
+      protocol    = "tcp"
+      description = "EFS incomming traffic"
+      cidr_blocks = "0.0.0.0/0"
+    }
+  ]
+  egress_with_cidr_blocks = [
+    {
+      from_port   = 0
+      to_port     = 65535
+      protocol    = "-1"
+      description = "Allow all egress traffic"
+    }
+  ]
 
-  enabled = local.security_group_enabled
-  context = module.this.context
+  tags = var.tags
 }
 
-module "dns" {
-  source  = "cloudposse/route53-cluster-hostname/aws"
-  version = "0.12.0"
-
-  enabled  = module.this.enabled && length(var.zone_id) > 0 ? true : false
-  dns_name = var.dns_name == "" ? module.this.id : var.dns_name
-  ttl      = 60
-  zone_id  = var.zone_id
-  records  = [local.dns_name]
-
-  context = module.this.context
-}

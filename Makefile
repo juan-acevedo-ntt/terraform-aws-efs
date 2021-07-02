@@ -1,10 +1,50 @@
-SHELL := /bin/bash
+SHELL := bash
 
-# List of targets the `readme` target should call before generating the readme
-export README_DEPS ?= docs/targets.md docs/terraform.md
+all: test-all
 
--include $(shell curl -sSL -o .build-harness "https://git.io/build-harness"; echo .build-harness)
+PHONY += test-all
+test-all: validate test-unit test-integration
 
-## Lint terraform code
+PHONY += azlogin
+azlogin:
+	@az login --service-principal -u $(ARM_CLIENT_ID) -p $(ARM_CLIENT_SECRET) --tenant $(ARM_TENANT_ID)
+
+PHONY += validate
+validate:
+	terraform init && terraform validate
+
+# NOTE: This target requires wata727/tflint Docker image
+PHONY += lint
 lint:
-	$(SELF) terraform/install terraform/get-modules terraform/get-plugins terraform/lint terraform/validate
+	tflint
+
+PHONY += format-check
+format-check:
+	terraform fmt -recursive -check
+	@test -z "$(shell gofmt -l test)" || { echo "Wrong format. Please execute: make format"; exit 1; }
+
+# Run unit and integration tests using Terratest
+#
+# NOTE: These targets require the terraform-test Docker image
+PHONY += test-unit
+test-unit: clean format
+	cd test && go test -run TestUT_*
+
+PHONY += test-integration
+test-integration: clean format
+	cd test && go test -timeout 1800s -run TestExamplesComplete
+
+PHONY += format
+format:
+	terraform fmt -recursive
+	go fmt ./test/...
+
+PHONY += clean
+clean:
+	rm -rf vendor .terraform terraform.tfplan terraform.tfstate*
+
+PHONY += clean-all
+clean-all: destroy-examples clean
+	cd test/fixture && rm -rf vendor .terraform terraform.tfplan terraform.tfstate*
+
+.PHONY: $(PHONY)

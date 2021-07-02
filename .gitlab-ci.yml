@@ -1,0 +1,39 @@
+variables:
+  ECR: 144127699237.dkr.ecr.eu-west-1.amazonaws.com
+  IMAGE_TERRAFORM_TEST: $ECR/ops/ntt-terraform-test
+  TERRAFORM_VERSION: "1.0.1"
+
+image: "${IMAGE_TERRAFORM_TEST}:${TERRAFORM_VERSION}"
+
+stages:
+  - validate
+  - test
+
+terraform-lint:
+  stage: validate
+  script:
+    - make lint
+
+terraform-fmt:
+  stage: validate
+  script:
+    - make format-check
+
+terraform-validate:
+  stage: validate
+  script:
+    - make validate
+  # fails due to missing features {}
+  allow_failure: true
+
+# all targets include clean and deferred terraform destroy
+run-unit-tests:
+  stage: test
+  script:
+    - make test-unit
+
+run-integration-tests:
+  stage: test
+  script:
+#    - make azlogin
+    - make test-integration

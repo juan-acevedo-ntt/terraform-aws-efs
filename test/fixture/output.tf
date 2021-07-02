@@ -1,13 +1,5 @@
-output "public_subnet_cidrs" {
-  value = module.subnets.public_subnet_cidrs
-}
-
-output "private_subnet_cidrs" {
-  value = module.subnets.private_subnet_cidrs
-}
-
 output "vpc_cidr" {
-  value = module.vpc.vpc_cidr_block
+  value = aws_vpc.main.cidr_block
 }
 
 output "efs_arn" {
@@ -18,21 +10,6 @@ output "efs_arn" {
 output "efs_id" {
   value       = module.efs.id
   description = "EFS ID"
-}
-
-output "efs_host" {
-  value       = module.efs.host
-  description = "Route53 DNS hostname for the EFS"
-}
-
-output "efs_dns_name" {
-  value       = module.efs.dns_name
-  description = "EFS DNS name"
-}
-
-output "efs_mount_target_dns_names" {
-  value       = module.efs.mount_target_dns_names
-  description = "List of EFS mount target DNS names"
 }
 
 output "efs_mount_target_ids" {
@@ -53,11 +30,6 @@ output "efs_network_interface_ids" {
 output "security_group_id" {
   value       = module.efs.security_group_id
   description = "EFS Security Group ID"
-}
-
-output "security_group_arn" {
-  value       = module.efs.security_group_arn
-  description = "EFS Security Group ARN"
 }
 
 output "security_group_name" {

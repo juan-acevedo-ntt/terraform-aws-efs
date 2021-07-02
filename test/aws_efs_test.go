@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
-	"time"
+  "time"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
@@ -17,16 +17,16 @@ func TestExamplesComplete(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 
 	randId := strconv.Itoa(rand.Intn(100000))
-	attributes := []string{randId}
+//	attributes := []string{randId}
 
 	terraformOptions := &terraform.Options{
 		// The path to where our Terraform code is located
-		TerraformDir: "../../examples/complete",
+		TerraformDir: "./fixture",
 		Upgrade:      true,
 		// Variables to pass to our Terraform code using -var-file options
-		VarFiles: []string{"fixtures.us-east-2.tfvars"},
+//		VarFiles: []string{"fixtures.eu-west-1.tfvars"},
 		Vars: map[string]interface{}{
-			"attributes": attributes,
+			"attributes": randId,
 		},
 	}
 
@@ -38,26 +38,14 @@ func TestExamplesComplete(t *testing.T) {
 
 	// Run `terraform output` to get the value of an output variable
 	vpcCidr := terraform.Output(t, terraformOptions, "vpc_cidr")
-	expectedVpcCidr := "172.16.0.0/16"
+	expectedVpcCidr := "10.0.0.0/16"
 	// Verify we're getting back the outputs we expect
 	assert.Equal(t, expectedVpcCidr, vpcCidr)
 
 	// Run `terraform output` to get the value of an output variable
-	privateSubnetCidrs := terraform.OutputList(t, terraformOptions, "private_subnet_cidrs")
-	expectedPrivateSubnetCidrs := []string{"172.16.0.0/19", "172.16.32.0/19"}
-	// Verify we're getting back the outputs we expect
-	assert.Equal(t, expectedPrivateSubnetCidrs, privateSubnetCidrs)
-
-	// Run `terraform output` to get the value of an output variable
-	publicSubnetCidrs := terraform.OutputList(t, terraformOptions, "public_subnet_cidrs")
-	expectedPublicSubnetCidrs := []string{"172.16.96.0/19", "172.16.128.0/19"}
-	// Verify we're getting back the outputs we expect
-	assert.Equal(t, expectedPublicSubnetCidrs, publicSubnetCidrs)
-
-	// Run `terraform output` to get the value of an output variable
 	efsArn := terraform.Output(t, terraformOptions, "efs_arn")
 	// Verify we're getting back the outputs we expect
-	assert.Contains(t, efsArn, "arn:aws:elasticfilesystem:us-east-2:")
+	assert.Contains(t, efsArn, "arn:aws:elasticfilesystem:eu-west-1:")
 
 	// Run `terraform output` to get the value of an output variable
 	efsId := terraform.Output(t, terraformOptions, "efs_id")
@@ -66,7 +54,7 @@ func TestExamplesComplete(t *testing.T) {
 
 	// Run `terraform output` to get the value of an output variable
 	securityGroupName := terraform.Output(t, terraformOptions, "security_group_name")
-	expectedSecurityGroupName := "eg-test-efs-test-" + randId
+	expectedSecurityGroupName := "sec-efstest-" + randId
 	// Verify we're getting back the outputs we expect
 	assert.Equal(t, expectedSecurityGroupName, securityGroupName)
 
@@ -75,8 +63,4 @@ func TestExamplesComplete(t *testing.T) {
 	// Verify we're getting back the outputs we expect
 	assert.Contains(t, securityGroupID, "sg-", "SG ID should contains substring 'sg-'")
 
-	// Run `terraform output` to get the value of an output variable
-	securityGroupARN := terraform.Output(t, terraformOptions, "security_group_arn")
-	// Verify we're getting back the outputs we expect
-	assert.Contains(t, securityGroupARN, "arn:aws:ec2", "SG ID should contains substring 'arn:aws:ec2'")
 }
